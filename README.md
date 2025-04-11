@@ -14,8 +14,6 @@
 
 <p>This serves as a fundamental yet effective approach to lossy image data reduction, developed as part of the IF2211 Algorithmic Strategies course assignment.</p>
 
-
-
 <h2> Project Structure</h2>
 
 <pre>
@@ -56,12 +54,9 @@ cd Tucil2_13523096</code></pre>
   <li><strong>Compile the Source Code (Example using g++):</strong>
     <p>Navigate to the project's root directory via your terminal, then run:</p>
     <pre><code class="lang-bash">g++ -std=c++17 -I./src src/main.cpp src/QuadTree.cpp src/stb_image.cpp -o bin/main
-./bin/main</code></pre>
+./bin/main.exe</code></pre>
   </li>
 </ol>
-
-
-
 
 <h2>Author</h2>
 <ul>
@@ -69,4 +64,5 @@ cd Tucil2_13523096</code></pre>
 </ul>
 
 ---
+
 <p align="center">Selamat Mengompres!</p>
