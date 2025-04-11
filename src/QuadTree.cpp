@@ -3,7 +3,6 @@
 #include <cmath>
 #include <unordered_map>
 #include <functional>
-#include "gif.h"
 
 using namespace std;
 
@@ -54,6 +53,7 @@ double QuadTree::calculateError(int x, int y, int width, int height) {
         
         case 3: {
             uint8_t minR = 255, maxR = 0, minG = 255, maxG = 0, minB = 255, maxB = 0;
+            bool pixelFound = false;
             for (int i = y; i < y + height && i < pixels.size(); i++) {
                 for (int j = x; j < x + width && j < pixels[i].size(); j++) {
                     minR = min(minR, pixels[i][j].r);
@@ -62,8 +62,10 @@ double QuadTree::calculateError(int x, int y, int width, int height) {
                     maxG = max(maxG, pixels[i][j].g);
                     minB = min(minB, pixels[i][j].b);
                     maxB = max(maxB, pixels[i][j].b);
+                    pixelFound = true;
                 }
             }
+            if (!pixelFound) return 0.0;
             return ((maxR - minR) + (maxG - minG) + (maxB - minB)) / 3.0;
         }
         
@@ -94,38 +96,70 @@ double QuadTree::calculateError(int x, int y, int width, int height) {
             return (calcEntropy(histR) + calcEntropy(histG) + calcEntropy(histB)) / 3.0;
         }
 
-        case 5: {
-            const double C1 = 6.5025, C2 = 58.5225;
-            int count = 0;
-        
-            double mu[3] = {0}, sigma[3] = {0};
-            for (int i = y; i < y + height; i++) {
-                for (int j = x; j < x + width; j++) {
-                    mu[0] += pixels[i][j].r;
-                    mu[1] += pixels[i][j].g;
-                    mu[2] += pixels[i][j].b;
-                    count++;
+        case 5: { 
+            avg = calculateAverage(x, y, width, height);
+            long long totalPixels = 0;
+            double meanOrigR = 0, meanOrigG = 0, meanOrigB = 0;
+            double varOrigR = 0, varOrigG = 0, varOrigB = 0;
+
+            for (int i = y; i < y + height && i < pixels.size(); ++i) {
+                for (int j = x; j < x + width && j < pixels[i].size(); ++j) {
+                    meanOrigR += pixels[i][j].r;
+                    meanOrigG += pixels[i][j].g;
+                    meanOrigB += pixels[i][j].b;
+                    totalPixels++;
                 }
             }
-            for (int c = 0; c < 3; c++) mu[c] /= count;
 
-            // Hitung variance
-            for (int i = y; i < y + height; i++) {
-                for (int j = x; j < x + width; j++) {
-                    sigma[0] += pow(pixels[i][j].r - mu[0], 2);
-                    sigma[1] += pow(pixels[i][j].g - mu[1], 2);
-                    sigma[2] += pow(pixels[i][j].b - mu[2], 2);
+            if (totalPixels == 0) return 0.0; 
+
+            meanOrigR /= totalPixels;
+            meanOrigG /= totalPixels;
+            meanOrigB /= totalPixels;
+
+            for (int i = y; i < y + height && i < pixels.size(); ++i) {
+                for (int j = x; j < x + width && j < pixels[i].size(); ++j){
+                    double diffR = pixels[i][j].r - meanOrigR;
+                    double diffG = pixels[i][j].g - meanOrigG;
+                    double diffB = pixels[i][j].b - meanOrigB;
+                    varOrigR += diffR * diffR;
+                    varOrigG += diffG * diffG;
+                    varOrigB += diffB * diffB;
                 }
             }
-            for (int c = 0; c < 3; c++) sigma[c] /= count;
 
-            double ssimSum = 0;
-            for (int c = 0; c < 3; c++) {
-                const double numerator = (2 * mu[c] * mu[c] + C1) * C2;
-                const double denominator = (mu[c] * mu[c] + mu[c] * mu[c] + C1) * (sigma[c] + C2);
-                ssimSum += numerator / denominator;
-            }
-            return ssimSum / 3.0;
+             if (totalPixels > 1) {
+                 varOrigR /= (totalPixels - 1); 
+                 varOrigG /= (totalPixels - 1); 
+                 varOrigB /= (totalPixels - 1); 
+             } else {
+                 varOrigR = varOrigG = varOrigB = 0;
+             }
+
+            double meanCompR = avg.r;
+            double meanCompG = avg.g;
+            double meanCompB = avg.b;
+            const double varCompR = 0.0, varCompG = 0.0, varCompB = 0.0;
+            const double covR = 0.0, covG = 0.0, covB = 0.0;
+
+            const double K1 = 0.01;
+            const double K2 = 0.03;
+            const double L = 255.0; 
+            const double C1 = (K1 * L) * (K1 * L);
+            const double C2 = (K2 * L) * (K2 * L);
+
+            double ssimR = ((2.0 * meanOrigR * meanCompR + C1) * C2) /
+                           ((meanOrigR * meanOrigR + meanCompR * meanCompR + C1) * (varOrigR + varCompR + C2));
+            double ssimG = ((2.0 * meanOrigG * meanCompG + C1) * C2) /
+                           ((meanOrigG * meanOrigG + meanCompG * meanCompG + C1) * (varOrigG + varCompG + C2));
+            double ssimB = ((2.0 * meanOrigB * meanCompB + C1) * C2) /
+                           ((meanOrigB * meanOrigB + meanCompB * meanCompB + C1) * (varOrigB + varCompB + C2));
+
+            double avgSSIM = (ssimR + ssimG + ssimB) / 3.0;
+
+            avgSSIM = std::max(-1.0, std::min(1.0, avgSSIM));
+
+            return 1.0 - avgSSIM;
         }
         
         default:
@@ -133,107 +167,15 @@ double QuadTree::calculateError(int x, int y, int width, int height) {
     }
 }
 
-void QuadTree::recordCompressionFrame(const std::vector<std::vector<RGB>>& frame) {
-    compressionFrames.push_back(frame);
-}
-
-bool QuadTree::saveCompressionGIF(const std::string& filename, int delay) {
-    if (compressionFrames.empty()) return false;
-    
-    int width = compressionFrames[0][0].size();
-    int height = compressionFrames[0].size();
-    
-    GifWriter g;
-    if (!GifBegin(&g, filename.c_str(), width, height, delay)) {
-        return false;
-    }
-    
-    std::vector<uint8_t> image(width * height * 4);
-    for (const auto& frame : compressionFrames) {
-        // ... [isi frame ke image] ...
-        if (!GifWriteFrame(&g, image.data(), width, height, delay)) {
-            GifEnd(&g);
-            return false;
-        }
-    }
-    
-    return GifEnd(&g);
-}
-
-// size_t QuadTree::estimateCompressedSize(double tempThreshold) {
-//     std::function<size_t(int, int, int, int, double)> estimate;
-    
-//     estimate = [&](int x, int y, int width, int height, double thresh) -> size_t {
-//         if (width * height <= minBlockSize) {
-//             return sizeof(RGB); 
-//         }
-
-//         double error = calculateError(x, y, width, height);
-//         if (error <= thresh) {
-//             return sizeof(RGB); 
-//         }
-
-//         int halfW = width / 2, halfH = height / 2;
-//         return estimate(x, y, halfW, halfH, thresh) +
-//                estimate(x + halfW, y, width - halfW, halfH, thresh) +
-//                estimate(x, y + halfH, halfW, height - halfH, thresh) +
-//                estimate(x + halfW, y + halfH, width - halfW, height - halfH, thresh) +
-//                sizeof(void*) * 4; 
-//     };
-
-//     return estimate(0, 0, pixels[0].size(), pixels.size(), tempThreshold);
-// }
-
-// void QuadTree::adjustThresholdForCompression(const std::vector<std::vector<RGB>>& imagePixels, double targetRatio, size_t originalSize) {
-//     pixels = imagePixels;
-    
-//     if (targetRatio <= 0) return;
-
-//     double low = 0;
-//     double high = (errorMethod == 1) ? 65025 : 
-//                  (errorMethod == 2 || errorMethod == 3) ? 255 : 8;
-//     double mid = threshold;
-//     double currentRatio = 0;
-//     const double epsilon = 0.01; 
-//     const int maxIterations = 20; 
-
-//     for (int i = 0; i < maxIterations; i++) {
-//         size_t estimatedSize = estimateCompressedSize(mid);
-//         currentRatio = 1.0 - (double)estimatedSize / originalSize;
-
-//         if (fabs(currentRatio - targetRatio) < epsilon) {
-//             break;
-//         }
-
-//         if (currentRatio < targetRatio) {
-//             low = mid;
-//         } else {
-//             high = mid;
-//         }
-//         mid = (low + high) / 2;
-//     }
-
-//     threshold = mid;
-// }
-
-
 std::shared_ptr<QuadNode> QuadTree::buildTree(int x, int y, int width, int height) {
     if (width * height <= minBlockSize) {
-        auto node = std::make_shared<QuadNode>(x, y, width, height, 
-                                     calculateAverage(x, y, width, height), true);
-        // Rekam frame setelah pembuatan leaf node
-        auto frame = reconstructImage();
-        recordCompressionFrame(frame);
+        auto node = std::make_shared<QuadNode>(x, y, width, height, calculateAverage(x, y, width, height), true);
         return node;
     }
 
     double error = calculateError(x, y, width, height);
     if (error <= threshold) {
-        auto node = std::make_shared<QuadNode>(x, y, width, height, 
-                                     calculateAverage(x, y, width, height), true);
-        // Rekam frame setelah pembuatan leaf node
-        auto frame = reconstructImage();
-        recordCompressionFrame(frame);
+        auto node = std::make_shared<QuadNode>(x, y, width, height, calculateAverage(x, y, width, height), true);
         return node;
     }
 
@@ -245,10 +187,6 @@ std::shared_ptr<QuadNode> QuadTree::buildTree(int x, int y, int width, int heigh
 
     auto node = std::make_shared<QuadNode>(x, y, width, height, RGB(), false);
     node->setChildren(nw, ne, sw, se);
-    
-    // Rekam frame setelah penggabungan node
-    auto frame = reconstructImage();
-    recordCompressionFrame(frame);
     return node;
 }
 
@@ -258,8 +196,7 @@ void QuadTree::compress(const std::vector<std::vector<RGB>>& imagePixels) {
 }
 
 std::vector<std::vector<RGB>> QuadTree::reconstructImage() {
-    std::vector<std::vector<RGB>> result(pixels.size(), 
-                                       std::vector<RGB>(pixels[0].size()));
+    std::vector<std::vector<RGB>> result(pixels.size(), std::vector<RGB>(pixels[0].size()));
     
     std::function<void(std::shared_ptr<QuadNode>)> reconstruct;
     reconstruct = [&](std::shared_ptr<QuadNode> node) {

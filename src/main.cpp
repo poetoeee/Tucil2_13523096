@@ -89,44 +89,21 @@ int main() {
         return 1;
     }
 
-    // double targetCompression;
-    // cout << "\nEnter target compression ratio (0-1, 0 to use threshold):\n>> ";
-    // cin >> targetCompression;
-    // if (targetCompression < 0 || targetCompression > 1){
-    //     cerr << "Error: Invalid target compression ratio\n";
-    //     return 1;
-    // }
-
     string outputPath;
     cout << "\nOutput image path:\n>> ";
     cin >> outputPath;
     fs::create_directories(fs::path(outputPath).parent_path());
 
-    // string gifPath;
-    // cout << "\nOutput GIF path (leave empty to skip):\n>> ";
-    // cin.ignore(); // Membersihkan newline sebelumnya
-    // getline(cin, gifPath);
-
     auto start = high_resolution_clock::now();
     
     QuadTree quadtree(threshold, minBlock, method);
-    // if (targetCompression > 0) {
-    //     size_t originalSize = img.getFileSize(inputPath);
-    //     quadtree.adjustThresholdForCompression(img.getPixels(), targetCompression, originalSize);
-    // }
+    
     quadtree.compress(img.getPixels());
     auto compressedImg = quadtree.reconstructImage();
     img.saveImage(compressedImg, outputPath);
     
     auto end = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(end - start);
-    // if (!gifPath.empty()) {
-    //     if (quadtree.saveCompressionGIF(gifPath)) {
-    //         cout << "GIF created successfully at: " << gifPath << endl;
-    //     } else {
-    //         cerr << "Failed to create GIF" << endl;
-    //     }
-    // }
 
     size_t originalSize = img.getFileSize(inputPath);
     size_t compressedSize = img.getFileSize(outputPath);
