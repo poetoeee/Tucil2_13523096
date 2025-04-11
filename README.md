@@ -55,7 +55,7 @@ cd Tucil2_13523096</code></pre>
   </li>
   <li><strong>Compile the Source Code (Example using g++):</strong>
     <p>Navigate to the project's root directory via your terminal, then run:</p>
-    <pre><code class="lang-bash">gg++ -std=c++17 -I./src src/main.cpp src/QuadTree.cpp src/stb_image.cpp -o bin/main
+    <pre><code class="lang-bash">g++ -std=c++17 -I./src src/main.cpp src/QuadTree.cpp src/stb_image.cpp -o bin/main
 ./bin/main</code></pre>
   </li>
 </ol>
