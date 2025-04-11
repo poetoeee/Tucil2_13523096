@@ -1,6 +1,7 @@
 #include <iostream>
 #include <chrono>
 #include <iomanip>
+#include <string>
 #include "Image.hpp"
 #include "QuadTree.hpp"
 #include <filesystem>
@@ -54,7 +55,7 @@ int main() {
     if (!validateImage(inputPath)) return 1;
 
     Image img;
-    if (!img.loadImage(inputPath)) {
+    if (!img.loadImg(inputPath)) {
         cerr << "Error: Failed to load image\n";
         return 1;
     }
@@ -94,16 +95,34 @@ int main() {
     cin >> outputPath;
     fs::create_directories(fs::path(outputPath).parent_path());
 
+    string gifPath;
+    cout << "\nOutput GIF path (leave empty to skip):\n>> ";
+    cin.ignore(); 
+    getline(cin, gifPath);
+
     auto start = high_resolution_clock::now();
     
     QuadTree quadtree(threshold, minBlock, method);
     
     quadtree.compress(img.getPixels());
     auto compressedImg = quadtree.reconstructImage();
-    img.saveImage(compressedImg, outputPath);
+    img.saveImg(compressedImg, outputPath);
     
     auto end = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(end - start);
+
+    if (!gifPath.empty()) {
+        cout << "\nSaving compression process GIF..." << endl;
+        try { 
+             fs::create_directories(fs::path(gifPath).parent_path());
+        } catch (const fs::filesystem_error& e) {
+             cerr << "Warning: Could not create directories for GIF: " << e.what() << endl;
+        }
+        int gifDelay = 400; 
+        if (!quadtree.saveGIF(gifPath, gifDelay)) {
+            cerr << "Error: Failed to save compression GIF to " << gifPath << endl;
+        }
+    }
 
     size_t originalSize = img.getFileSize(inputPath);
     size_t compressedSize = img.getFileSize(outputPath);

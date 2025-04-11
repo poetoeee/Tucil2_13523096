@@ -11,6 +11,14 @@ struct RGB {
     uint8_t r, g, b;
     RGB() : r(0), g(0), b(0) {}
     RGB(uint8_t r, uint8_t g, uint8_t b) : r(r), g(g), b(b) {}
+
+    bool operator==(const RGB& other) const {
+        return r == other.r && g == other.g && b == other.b;
+    }
+
+    bool operator!=(const RGB& other) const {
+        return !(*this == other);
+    }
 };
 
 class Image {
@@ -20,7 +28,7 @@ private:
     int height = 0;
 
 public:
-    bool loadImage(const std::string& filename) {
+    bool loadImg(const std::string& filename) {
         int channels;
         unsigned char* data = stbi_load(filename.c_str(), &width, &height, &channels, 3);
         if (!data) return false;
@@ -36,7 +44,7 @@ public:
         return true;
     }
 
-    bool saveImage(const std::vector<std::vector<RGB>>& imgData, const std::string& filename) {
+    bool saveImg(const std::vector<std::vector<RGB>>& imgData, const std::string& filename) {
         std::vector<uint8_t> data(width * height * 3);
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {

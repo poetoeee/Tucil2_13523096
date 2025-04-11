@@ -12,11 +12,9 @@ private:
     std::shared_ptr<QuadNode> children[4]; 
 
 public:
-    QuadNode(int x, int y, int w, int h, RGB color, bool leaf)
-        : x(x), y(y), width(w), height(h), averageColor(color), isLeaf(leaf) {}
+    QuadNode(int x, int y, int w, int h, RGB color, bool leaf): x(x), y(y), width(w), height(h), averageColor(color), isLeaf(leaf) {}
 
-    void setChildren(std::shared_ptr<QuadNode> nw, std::shared_ptr<QuadNode> ne,
-                    std::shared_ptr<QuadNode> sw, std::shared_ptr<QuadNode> se) {
+    void setChildren(std::shared_ptr<QuadNode> nw, std::shared_ptr<QuadNode> ne,std::shared_ptr<QuadNode> sw, std::shared_ptr<QuadNode> se) {
         children[0] = nw;
         children[1] = ne;
         children[2] = sw;
